@@ -141,6 +141,17 @@ blueprint:
           step: 1
           mode: box
 
+    auto_remove:
+      name: Auto-remove the app when updates stop
+      description: >
+        When ON, the app self-deletes from the display if it stops being updated
+        (e.g. Home Assistant goes offline). The expiry is set to 3× the safety
+        re-push interval, so it never disappears during normal operation. When
+        OFF, the app stays on the display until you remove it manually.
+      default: true
+      selector:
+        boolean: {}
+
 # ───────────────────────────────────────────────────────────────────────────
 
 mode: restart
@@ -157,6 +168,8 @@ variables:
   text_color: !input text_color
   sep: !input separator
   default_icon: "85"
+  refresh_min: !input refresh_minutes
+  auto_remove: !input auto_remove
 
   # Build the list of MQTT topics: <prefix>/custom/<app_name>, where the prefix
   # of each selected device is read from its `device_topic` entity. A manual
@@ -191,6 +204,7 @@ variables:
     {%- endfor -%}
     {%- set body = ns.titles | join(sep) -%}
     {%- set icon = icon_code if (icon_code | string | trim) else default_icon -%}
+    {%- set lifetime = (refresh_min | int) * 180 if auto_remove else 0 -%}
     {{
       {
         "text": (body if body else "No headlines"),
@@ -198,7 +212,9 @@ variables:
         "pushIcon": (push_icon | int),
         "color": text_color,
         "repeat": 1,
-        "scrollSpeed": 100
+        "scrollSpeed": 100,
+        "lifetime": lifetime,
+        "lifetimeMode": 0
       } | to_json
     }}
 

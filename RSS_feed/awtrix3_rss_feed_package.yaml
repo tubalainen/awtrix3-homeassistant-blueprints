@@ -82,6 +82,15 @@ input_select:
     initial: "Fixed on the left"
     icon: mdi:image-move
 
+input_boolean:
+  awtrix_rss_auto_remove:
+    # When ON, the app self-deletes from the display if updates stop (e.g. HA
+    # offline). Expiry is 3× the 15-min re-push interval (45 min), so it never
+    # disappears during normal operation. OFF = persist until removed manually.
+    name: "AWTRIX RSS – Auto-remove when updates stop"
+    initial: true
+    icon: mdi:timer-remove
+
 # ----------------------------------------------------------------------------
 #  REST feed sensor – the URL comes live from the input_text helper above.
 #  HA auto-converts the feed XML to a dict, so rss.channel.item is the list.
@@ -138,6 +147,7 @@ automation:
           - input_text.awtrix_rss_color
           - input_text.awtrix_rss_separator
           - input_text.awtrix_rss_prefix
+          - input_boolean.awtrix_rss_auto_remove
       - trigger: homeassistant
         event: start
       - trigger: time_pattern
@@ -169,6 +179,7 @@ automation:
             {%- set ic = states('input_text.awtrix_rss_icon') | trim -%}
             {%- set icon = ic if ic else default_icon -%}
             {%- set push = behavior_map[states('input_select.awtrix_rss_icon_behavior')] | default(0) -%}
+            {%- set lifetime = 2700 if is_state('input_boolean.awtrix_rss_auto_remove', 'on') else 0 -%}
             {{
               {
                 "text": (body if body else "No headlines"),
@@ -176,6 +187,8 @@ automation:
                 "pushIcon": push,
                 "color": states('input_text.awtrix_rss_color'),
                 "repeat": 1,
-                "scrollSpeed": 100
+                "scrollSpeed": 100,
+                "lifetime": lifetime,
+                "lifetimeMode": 0
               } | to_json
             }}

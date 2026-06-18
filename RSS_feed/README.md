@@ -35,7 +35,8 @@ Assistant.
 4. On the **AWTRIX web UI → Icons** tab, download icon ID **85** (or your own).
 5. Configure from the created UI helpers (Settings → Devices & Services →
    Helpers): Feed URL, MQTT topic prefix, Number of headlines, Icon behaviour,
-   Icon, Text colour, Separator.
+   Icon, Text colour, Separator, and **Auto-remove when updates stop** (toggle:
+   ON self-deletes the app if HA stops pushing; OFF persists).
 
 The feed URL is read live via the REST sensor's `resource_template`, so changing
 the **Feed URL** helper re-fetches immediately. The app is published to
@@ -90,6 +91,7 @@ the **Feed URL** helper re-fetches immediately. The app is published to
 | **Text colour** | Hex, e.g. `#FFA500`. |
 | **Headline separator** | Text shown between headlines. |
 | **Safety re-push interval** | Minutes between safety re-sends. |
+| **Auto-remove when updates stop** | ON = app self-deletes if HA stops pushing (expiry = 3× the re-push interval). OFF = persists until removed manually. |
 
 ---
 
@@ -126,6 +128,12 @@ payload and publish it to `<prefix>/custom/rss`:
 The app is a persistent AWTRIX Custom App, so once pushed it stays in the
 rotation until updated or removed — it doesn't need to be re-sent to keep
 showing.
+
+**Auto-remove (optional, ON by default):** the payload sets AWTRIX `lifetime`
+to 3× the re-push interval. While HA keeps pushing, the app never expires; if HA
+goes offline, the app self-deletes after that window so the display isn't left
+showing stale headlines. Turn it OFF to keep the app until you remove it
+manually (`lifetime: 0` = persist forever).
 
 ### Removing the app
 
