@@ -90,7 +90,7 @@ the **Feed URL** helper re-fetches immediately. The app is published to
 | **Icon** | Blank = RSS icon #85, or your own ID / filename / Base64. |
 | **Text colour** | Hex, e.g. `#FFA500`. |
 | **Headline separator** | Text shown between headlines. |
-| **Safety re-push interval** | Minutes between safety re-sends. |
+| **Safety re-push interval** | Dropdown: re-send every 5 / 10 / 15 / 30 minutes (default 15). |
 | **Auto-remove when updates stop** | ON = app self-deletes if HA stops pushing (expiry = 3× the re-push interval). OFF = persists until removed manually. |
 
 ---
@@ -122,8 +122,12 @@ payload and publish it to `<prefix>/custom/rss`:
 - **Package:** when the feed sensor updates (REST `scan_interval`, default 30
   min), when any helper changes, on Home Assistant start, and a safety re-push
   **every 15 minutes**.
-- **Blueprint:** when the feed sensor updates, on Home Assistant start, and
-  every *Safety re-push interval* minutes (default 15).
+- **Blueprint:** when the feed sensor updates, on Home Assistant start, and on
+  the *Safety re-push interval* (every 5 / 10 / 15 / 30 min, default 15).
+
+Note: the feed-sensor trigger fires only when the feed content actually
+changes, not on every poll. So between content changes, the periodic re-push is
+what keeps the app refreshed.
 
 The app is a persistent AWTRIX Custom App, so once pushed it stays in the
 rotation until updated or removed — it doesn't need to be re-sent to keep

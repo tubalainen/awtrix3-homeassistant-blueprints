@@ -127,19 +127,25 @@ blueprint:
       selector:
         text: {}
 
-    refresh_minutes:
-      name: Safety re-push interval (minutes)
+    refresh_interval:
+      name: Safety re-push interval
       description: >
         Besides updating whenever the feed sensor changes, the app is re-sent on
-        this interval so it survives an AWTRIX reboot. Set higher to reduce MQTT
-        traffic.
-      default: 15
+        this interval so it survives an AWTRIX reboot and keeps the auto-remove
+        timer alive. Choose a longer interval to reduce MQTT traffic.
+      default: "/15"
       selector:
-        number:
-          min: 1
-          max: 240
-          step: 1
-          mode: box
+        select:
+          mode: dropdown
+          options:
+            - label: Every 5 minutes
+              value: "/5"
+            - label: Every 10 minutes
+              value: "/10"
+            - label: Every 15 minutes
+              value: "/15"
+            - label: Every 30 minutes
+              value: "/30"
 
     auto_remove:
       name: Auto-remove the app when updates stop
@@ -168,7 +174,8 @@ variables:
   text_color: !input text_color
   sep: !input separator
   default_icon: "85"
-  refresh_min: !input refresh_minutes
+  refresh_interval: !input refresh_interval
+  refresh_min: "{{ refresh_interval | replace('/', '') | int(15) }}"
   auto_remove: !input auto_remove
 
   # Build the list of MQTT topics: <prefix>/custom/<app_name>, where the prefix
@@ -224,7 +231,7 @@ triggers:
   - trigger: homeassistant
     event: start
   - trigger: time_pattern
-    minutes: !input refresh_minutes
+    minutes: !input refresh_interval
 
 actions:
   - repeat:
