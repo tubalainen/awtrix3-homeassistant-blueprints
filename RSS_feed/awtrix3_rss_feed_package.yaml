@@ -1,0 +1,175 @@
+# ============================================================================
+#  AWTRIX 3 – RSS Feed  (self-contained Home Assistant PACKAGE)
+# ----------------------------------------------------------------------------
+#  Everything in ONE file: UI helpers + REST feed sensor + the push automation.
+#  Unlike a blueprint (which can only target a single domain and therefore
+#  cannot contain a `rest:` sensor), a package may bundle every domain together
+#  – so this is the truly "all-in-one" version.
+#
+#  INSTALL
+#  1. Make sure packages are enabled. In configuration.yaml:
+#
+#        homeassistant:
+#          packages: !include_dir_named packages
+#
+#  2. Save this file as:  /config/packages/awtrix3_rss_feed.yaml
+#  3. Restart Home Assistant.
+#  4. On the AWTRIX web UI → Icons tab, download icon ID 85 (or whatever icon
+#     you set) so it exists on the display.
+#  5. Configure everything live from the UI helpers it creates (Settings →
+#     Devices & Services → Helpers), e.g.:
+#        • text.AWTRIX RSS – Feed URL
+#        • text.AWTRIX RSS – MQTT topic prefix
+#        • number.AWTRIX RSS – Number of headlines
+#        • select.AWTRIX RSS – Icon behaviour
+#        • text.AWTRIX RSS – Icon / Text colour / Separator
+#
+#  The app is published to:  <prefix>/custom/rss
+#
+#  NOTE on `initial:` – with these set, the helpers reset to these defaults on
+#  every restart. If you'd rather your UI changes survive a restart, delete the
+#  `initial:` line from that helper (it will then remember its last value).
+# ============================================================================
+
+input_text:
+  awtrix_rss_url:
+    name: "AWTRIX RSS – Feed URL"
+    initial: "https://feeds.bbci.co.uk/news/world/rss.xml"
+    max: 255
+    icon: mdi:rss
+  awtrix_rss_prefix:
+    name: "AWTRIX RSS – MQTT topic prefix"
+    initial: "awtrix"
+    max: 64
+    icon: mdi:server-network
+  awtrix_rss_icon:
+    name: "AWTRIX RSS – Icon (blank = RSS #85)"
+    initial: ""
+    max: 255
+    icon: mdi:image
+  awtrix_rss_color:
+    name: "AWTRIX RSS – Text colour (hex)"
+    initial: "#FFFFFF"
+    max: 9
+    icon: mdi:palette
+  awtrix_rss_separator:
+    name: "AWTRIX RSS – Headline separator"
+    initial: "   •   "
+    max: 16
+    icon: mdi:dots-horizontal
+
+input_number:
+  awtrix_rss_count:
+    name: "AWTRIX RSS – Number of headlines"
+    initial: 5
+    min: 1
+    max: 20
+    step: 1
+    mode: slider
+    icon: mdi:format-list-numbered
+
+input_select:
+  awtrix_rss_icon_behavior:
+    name: "AWTRIX RSS – Icon behaviour"
+    options:
+      - "Fixed on the left"
+      - "Scroll away (no reappear)"
+      - "Scroll away (reappear each loop)"
+    initial: "Fixed on the left"
+    icon: mdi:image-move
+
+# ----------------------------------------------------------------------------
+#  REST feed sensor – the URL comes live from the input_text helper above.
+#  HA auto-converts the feed XML to a dict, so rss.channel.item is the list.
+#  (Atom feeds: change to value_json.feed.entry / json_attributes [entry].)
+# ----------------------------------------------------------------------------
+rest:
+  - resource_template: "{{ states('input_text.awtrix_rss_url') }}"
+    scan_interval: 1800
+    headers:
+      User-Agent: "Home Assistant AWTRIX RSS"
+    sensor:
+      - name: "AWTRIX RSS Feed"
+        unique_id: awtrix_rss_feed
+        icon: mdi:rss
+        unit_of_measurement: "headlines"
+        value_template: >-
+          {% set i = value_json.rss.channel.item | default([], true) %}
+          {% if i is mapping %}1{% else %}{{ i | count }}{% endif %}
+        json_attributes_path: "$.rss.channel"
+        json_attributes:
+          - item
+
+# ----------------------------------------------------------------------------
+#  Automations
+# ----------------------------------------------------------------------------
+automation:
+  # Re-fetch the feed immediately when the URL helper changes.
+  - id: awtrix_rss_refresh_on_url_change
+    alias: "AWTRIX RSS – Refresh feed when URL changes"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_text.awtrix_rss_url
+    action:
+      - service: homeassistant.update_entity
+        target:
+          entity_id: sensor.awtrix_rss_feed
+
+  # Build the payload and push it to the AWTRIX display.
+  - id: awtrix_rss_push
+    alias: "AWTRIX RSS – Push headlines to display"
+    mode: single
+    max_exceeded: silent
+    trigger:
+      - platform: state
+        entity_id: sensor.awtrix_rss_feed
+      - platform: state
+        entity_id:
+          - input_number.awtrix_rss_count
+          - input_select.awtrix_rss_icon_behavior
+          - input_text.awtrix_rss_icon
+          - input_text.awtrix_rss_color
+          - input_text.awtrix_rss_separator
+          - input_text.awtrix_rss_prefix
+      - platform: homeassistant
+        event: start
+      - platform: time_pattern
+        minutes: "/15"
+    variables:
+      behavior_map:
+        "Fixed on the left": 0
+        "Scroll away (no reappear)": 1
+        "Scroll away (reappear each loop)": 2
+      default_icon: "85"
+    action:
+      - service: mqtt.publish
+        data:
+          topic: "{{ states('input_text.awtrix_rss_prefix') | trim }}/custom/rss"
+          payload: >-
+            {%- set ns = namespace(titles=[]) -%}
+            {%- set raw = state_attr('sensor.awtrix_rss_feed', 'item') -%}
+            {%- if raw is mapping -%}{%- set raw = [raw] -%}{%- endif -%}
+            {%- if raw is string or raw is none -%}{%- set raw = [] -%}{%- endif -%}
+            {%- set num = states('input_number.awtrix_rss_count') | float(5) | int -%}
+            {%- set sep = states('input_text.awtrix_rss_separator') -%}
+            {%- for it in raw[: num] -%}
+              {%- set t = it.title if (it is mapping and it.title is defined) else it -%}
+              {%- if t is mapping -%}{%- set t = t.get('#text', '') -%}{%- endif -%}
+              {%- set t = t | string | striptags | trim -%}
+              {%- if t -%}{%- set ns.titles = ns.titles + [t] -%}{%- endif -%}
+            {%- endfor -%}
+            {%- set body = ns.titles | join(sep) -%}
+            {%- set ic = states('input_text.awtrix_rss_icon') | trim -%}
+            {%- set icon = ic if ic else default_icon -%}
+            {%- set push = behavior_map[states('input_select.awtrix_rss_icon_behavior')] | default(0) -%}
+            {{
+              {
+                "text": (body if body else "No headlines"),
+                "icon": icon,
+                "pushIcon": push,
+                "color": states('input_text.awtrix_rss_color'),
+                "repeat": 1,
+                "scrollSpeed": 100
+              } | to_json
+            }}
