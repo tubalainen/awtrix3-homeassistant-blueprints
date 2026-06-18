@@ -34,9 +34,10 @@ Assistant.
 3. Restart Home Assistant.
 4. On the **AWTRIX web UI → Icons** tab, download icon ID **85** (or your own).
 5. Configure from the created UI helpers (Settings → Devices & Services →
-   Helpers): Feed URL, MQTT topic prefix, Number of headlines, Icon behaviour,
-   Icon, Text colour, Separator, and **Auto-remove when updates stop** (toggle:
-   ON self-deletes the app if HA stops pushing; OFF persists).
+   Helpers): Feed URL, MQTT topic prefix, Number of headlines, **Scroll speed
+   (%)**, Icon behaviour, Icon, Text colour, Separator, and **Auto-remove when
+   updates stop** (toggle: ON self-deletes the app if HA stops pushing; OFF
+   persists).
 
 The feed URL is read live via the REST sensor's `resource_template`, so changing
 the **Feed URL** helper re-fetches immediately. The app is published to
@@ -88,11 +89,14 @@ the **Feed URL** helper re-fetches immediately. The app is published to
 | **Manual MQTT prefix** | Leave blank unless the device picker can't find your AWTRIX (then enter the prefix, no trailing slash). |
 | **App name** | Topic suffix `…/custom/<app_name>`; default `rss`. |
 | **RSS feed sensor** | The sensor from step 1. |
+| **RSS URL helper** | Optional. The `input_text` your sensor reads via `resource_template` (step 1b) — lets you change the feed from the UI. Leave blank if the URL is hard-coded. |
 | **Number of headlines** | 1–20. |
 | **Icon behaviour** | Fixed left / scroll-away (no reappear) / scroll-away (reappear). |
 | **Icon** | Blank = RSS icon #85, or your own ID / filename / Base64. |
 | **Text colour** | Hex, e.g. `#FFA500`. |
 | **Headline separator** | Text shown between headlines. |
+| **Scroll speed (%)** | AWTRIX scroll speed (100 = default). Lower = slower; try 40–70 if scrolling looks choppy. |
+| **Display duration** | Seconds the app shows when text is too short to scroll. |
 | **Safety re-push interval** | Dropdown: re-send every 5 / 10 / 15 / 30 minutes (default 15). |
 | **Auto-remove when updates stop** | ON = app self-deletes if HA stops pushing (expiry = 3× the re-push interval). OFF = persists until removed manually. |
 
@@ -190,6 +194,11 @@ prefix (e.g. `awtrix_b8d61a`), not the generic `awtrix`.
 - Icons are **not** auto-downloaded by ID at send time; add them via the AWTRIX
   web UI first.
 - Titles are passed through `striptags` + trim to drop stray HTML.
+- **Choppy scrolling?** Adjust the **Scroll speed (%)** control (`scrollSpeed`
+  in the payload). 100 is the AWTRIX default; lower values (e.g. 40–70) slow the
+  scroll down. Note that scroll smoothness is ultimately limited by the
+  display's matrix refresh — `scrollSpeed` is the only scroll lever AWTRIX
+  exposes per app.
 
 ### Editor warnings (VS Code / Studio Code Server)
 

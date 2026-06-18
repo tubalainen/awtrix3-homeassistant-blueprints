@@ -72,6 +72,18 @@ input_number:
     mode: slider
     icon: mdi:format-list-numbered
 
+  awtrix_rss_scroll_speed:
+    # AWTRIX scrollSpeed = percentage of the default scroll speed (100 =
+    # default). Lower = slower. If scrolling looks choppy/too fast, lower this
+    # (try 40–70); raise it for faster.
+    name: "AWTRIX RSS – Scroll speed (%)"
+    initial: 100
+    min: 10
+    max: 200
+    step: 5
+    mode: slider
+    icon: mdi:speedometer
+
 input_select:
   awtrix_rss_icon_behavior:
     name: "AWTRIX RSS – Icon behaviour"
@@ -142,6 +154,7 @@ automation:
       - trigger: state
         entity_id:
           - input_number.awtrix_rss_count
+          - input_number.awtrix_rss_scroll_speed
           - input_select.awtrix_rss_icon_behavior
           - input_text.awtrix_rss_icon
           - input_text.awtrix_rss_color
@@ -180,6 +193,7 @@ automation:
             {%- set icon = ic if ic else default_icon -%}
             {%- set push = behavior_map[states('input_select.awtrix_rss_icon_behavior')] | default(0) -%}
             {%- set lifetime = 2700 if is_state('input_boolean.awtrix_rss_auto_remove', 'on') else 0 -%}
+            {%- set speed = states('input_number.awtrix_rss_scroll_speed') | float(100) | int -%}
             {{
               {
                 "text": (body if body else "No headlines"),
@@ -187,7 +201,7 @@ automation:
                 "pushIcon": push,
                 "color": states('input_text.awtrix_rss_color'),
                 "repeat": 1,
-                "scrollSpeed": 100,
+                "scrollSpeed": speed,
                 "lifetime": lifetime,
                 "lifetimeMode": 0
               } | to_json

@@ -19,6 +19,13 @@ blueprint:
        your `configuration.yaml` (or a package), set your feed URL, and restart
        HA. This is where the **RSS feed URL is selected**.
 
+    1b. (Optional – to change the feed URL from the UI.) Create an
+        `input_text` helper (e.g. `input_text.rss_url`) and have the REST
+        sensor read it with
+        `resource_template: "{{ states('input_text.rss_url') }}"` instead of a
+        fixed `resource:`. Then select that helper as the **RSS URL helper**
+        input below. You can now switch feeds by editing the helper — no YAML.
+
     2. On the AWTRIX web UI → *Icons* tab, download icon ID **85** (or whatever
        icon ID you plan to use) so it exists on the display's flash. AWTRIX does
        not auto-download icons by ID at send time.
@@ -75,6 +82,19 @@ blueprint:
         entity:
           domain: sensor
 
+    rss_url_helper:
+      name: RSS URL helper (optional – for changing the feed from the UI)
+      description: >
+        Optional. If your REST sensor reads its URL from an `input_text` via
+        `resource_template` (see SETUP step 1b), select that `input_text` here.
+        The automation then re-fetches the feed on each cycle, so changing the
+        URL in that helper updates the display without editing any YAML. Leave
+        blank if the feed URL is hard-coded in the sensor.
+      default: ""
+      selector:
+        entity:
+          domain: input_text
+
     num_headlines:
       name: Number of headlines
       description: How many headlines to show before the app advances to the next one.
@@ -127,6 +147,33 @@ blueprint:
       selector:
         text: {}
 
+    scroll_speed:
+      name: Scroll speed (%)
+      description: >
+        AWTRIX scroll speed as a percentage of the default (100 = default).
+        Lower = slower. If the scrolling looks choppy or too fast, try lowering
+        this (e.g. 40–70) for a calmer scroll; raise it for faster.
+      default: 100
+      selector:
+        number:
+          min: 10
+          max: 200
+          step: 5
+          mode: slider
+
+    display_duration:
+      name: Display duration (seconds)
+      description: >
+        How long the app stays on screen when the text is short enough NOT to
+        scroll. Scrolling headlines instead show until they finish one pass.
+      default: 8
+      selector:
+        number:
+          min: 1
+          max: 60
+          step: 1
+          mode: box
+
     refresh_interval:
       name: Safety re-push interval
       description: >
@@ -168,11 +215,14 @@ variables:
   manual_prefix: !input manual_prefix
   app_name: !input app_name
   feed_sensor: !input feed_sensor
+  url_helper: !input rss_url_helper
   num: !input num_headlines
   push_icon: !input icon_behavior
   icon_code: !input icon_code
   text_color: !input text_color
   sep: !input separator
+  scroll_speed: !input scroll_speed
+  duration: !input display_duration
   default_icon: "85"
   refresh_interval: !input refresh_interval
   refresh_min: "{{ refresh_interval | replace('/', '') | int(15) }}"
@@ -219,7 +269,8 @@ variables:
         "pushIcon": (push_icon | int),
         "color": text_color,
         "repeat": 1,
-        "scrollSpeed": 100,
+        "scrollSpeed": (scroll_speed | int),
+        "duration": (duration | int),
         "lifetime": lifetime,
         "lifetimeMode": 0
       } | to_json
@@ -234,6 +285,16 @@ triggers:
     minutes: !input refresh_interval
 
 actions:
+  # If a URL helper is configured, re-fetch the feed so a URL change made in
+  # that input_text is picked up. The fresh data then re-triggers this
+  # automation (on feed-sensor change) and the new feed is published.
+  - if:
+      - condition: template
+        value_template: "{{ url_helper not in ['', none] }}"
+    then:
+      - action: homeassistant.update_entity
+        target:
+          entity_id: !input feed_sensor
   - repeat:
       for_each: "{{ topics }}"
       sequence:
