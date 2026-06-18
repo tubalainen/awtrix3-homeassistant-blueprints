@@ -89,7 +89,7 @@ the **Feed URL** helper re-fetches immediately. The app is published to
 | **Manual MQTT prefix** | Leave blank unless the device picker can't find your AWTRIX (then enter the prefix, no trailing slash). |
 | **App name** | Topic suffix `…/custom/<app_name>`; default `rss`. |
 | **RSS feed sensor** | The sensor from step 1. |
-| **RSS URL helper** | Optional. The `input_text` your sensor reads via `resource_template` (step 1b) — lets you change the feed from the UI. Leave blank if the URL is hard-coded. |
+| **RSS URL helper** | Optional. The `input_text` your sensor reads via `resource_template` (step 1b). Changing it **immediately** refreshes the REST sensor and pushes the new feed. Leave blank if the URL is hard-coded. |
 | **Number of headlines** | 1–20. |
 | **Icon behaviour** | Fixed left / scroll-away (no reappear) / scroll-away (reappear). |
 | **Icon** | Blank = RSS icon #85, or your own ID / filename / Base64. |
@@ -193,7 +193,14 @@ prefix (e.g. `awtrix_b8d61a`), not the generic `awtrix`.
   `value_json.feed.entry` — see the variant in the REST sensor example.
 - Icons are **not** auto-downloaded by ID at send time; add them via the AWTRIX
   web UI first.
-- Titles are passed through `striptags` + trim to drop stray HTML.
+- Titles are passed through `striptags` + trim to drop stray HTML, and common
+  non-ASCII punctuation (curly quotes, en/em dashes `–—`, ellipsis `…`, bullet
+  `•`) is converted to ASCII because the AWTRIX font can't render those glyphs.
+  Use plain ASCII for the **separator** too (default `  --  `).
+- **Text height:** AWTRIX has a single fixed-height built-in font and exposes
+  **no** font/size key in the custom-app API, so scrolling text cannot be made
+  taller to fill the full 8-pixel height — the slight top/bottom margin is
+  normal and not adjustable.
 - **Choppy scrolling?** Adjust the **Scroll speed (%)** control (`scrollSpeed`
   in the payload). 100 is the AWTRIX default; lower values (e.g. 40–70) slow the
   scroll down. Note that scroll smoothness is ultimately limited by the

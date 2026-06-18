@@ -57,8 +57,10 @@ input_text:
     max: 9
     icon: mdi:palette
   awtrix_rss_separator:
+    # Stick to plain ASCII — the AWTRIX font has no bullet (•) glyph. Use e.g.
+    # "  --  " or "  **  ".
     name: "AWTRIX RSS – Headline separator"
-    initial: "   •   "
+    initial: "  --  "
     max: 16
     icon: mdi:dots-horizontal
 
@@ -189,6 +191,12 @@ automation:
               {%- if t -%}{%- set ns.titles = ns.titles + [t] -%}{%- endif -%}
             {%- endfor -%}
             {%- set body = ns.titles | join(sep) -%}
+            {%- set body = body
+                | replace('’', "'") | replace('‘', "'")
+                | replace('“', '"') | replace('”', '"')
+                | replace('–', '-') | replace('—', '-')
+                | replace('…', '...') | replace('•', '*')
+                | replace(' ', ' ') -%}
             {%- set ic = states('input_text.awtrix_rss_icon') | trim -%}
             {%- set icon = ic if ic else default_icon -%}
             {%- set push = behavior_map[states('input_select.awtrix_rss_icon_behavior')] | default(0) -%}

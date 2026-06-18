@@ -87,13 +87,14 @@ blueprint:
       description: >
         Optional. If your REST sensor reads its URL from an `input_text` via
         `resource_template` (see SETUP step 1b), select that `input_text` here.
-        The automation then re-fetches the feed on each cycle, so changing the
-        URL in that helper updates the display without editing any YAML. Leave
-        blank if the feed URL is hard-coded in the sensor.
-      default: ""
+        The moment it changes (e.g. you enter a new feed URL) the automation
+        force-refreshes the REST sensor and then pushes the new headlines to the
+        display. Leave blank if the feed URL is hard-coded in the sensor.
+      default: []
       selector:
         entity:
           domain: input_text
+          multiple: true
 
     num_headlines:
       name: Number of headlines
@@ -142,8 +143,11 @@ blueprint:
 
     separator:
       name: Headline separator
-      description: Text placed between headlines when they are joined together.
-      default: "   •   "
+      description: >
+        Text placed between headlines when they are joined together. Stick to
+        plain ASCII — the AWTRIX font has no bullet (•) glyph, so use e.g.
+        `  --  ` or `  **  `.
+      default: "  --  "
       selector:
         text: {}
 
@@ -260,6 +264,13 @@ variables:
       {%- if t -%}{%- set ns.titles = ns.titles + [t] -%}{%- endif -%}
     {%- endfor -%}
     {%- set body = ns.titles | join(sep) -%}
+    {#- Normalise common non-ASCII punctuation the AWTRIX font can't render -#}
+    {%- set body = body
+        | replace('’', "'") | replace('‘', "'")
+        | replace('“', '"') | replace('”', '"')
+        | replace('–', '-') | replace('—', '-')
+        | replace('…', '...') | replace('•', '*')
+        | replace(' ', ' ') -%}
     {%- set icon = icon_code if (icon_code | string | trim) else default_icon -%}
     {%- set lifetime = (refresh_min | int) * 180 if auto_remove else 0 -%}
     {{
@@ -279,18 +290,23 @@ variables:
 triggers:
   - trigger: state
     entity_id: !input feed_sensor
+  # Fires when the RSS URL helper changes (if one is selected). An empty
+  # selection is a harmless no-op trigger.
+  - trigger: state
+    entity_id: !input rss_url_helper
   - trigger: homeassistant
     event: start
   - trigger: time_pattern
     minutes: !input refresh_interval
 
 actions:
-  # If a URL helper is configured, re-fetch the feed so a URL change made in
-  # that input_text is picked up. The fresh data then re-triggers this
-  # automation (on feed-sensor change) and the new feed is published.
+  # If a URL helper is configured, force-refresh the REST sensor so a URL
+  # change made in that input_text is fetched now. The fresh data then
+  # re-triggers this automation (on feed-sensor change) and the new feed is
+  # published.
   - if:
       - condition: template
-        value_template: "{{ url_helper not in ['', none] }}"
+        value_template: "{{ (url_helper | default([])) | length > 0 }}"
     then:
       - action: homeassistant.update_entity
         target:
