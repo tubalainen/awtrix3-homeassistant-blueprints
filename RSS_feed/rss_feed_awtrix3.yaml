@@ -131,16 +131,16 @@ variables:
   sep: !input separator
   default_icon: "85"
 
-trigger:
-  - platform: state
+triggers:
+  - trigger: state
     entity_id: !input feed_sensor
-  - platform: homeassistant
+  - trigger: homeassistant
     event: start
-  - platform: time_pattern
+  - trigger: time_pattern
     minutes: !input refresh_minutes
 
-action:
-  - service: mqtt.publish
+actions:
+  - action: mqtt.publish
     data:
       topic: "{{ topic_prefix | trim }}/custom/{{ app_name }}"
       payload: >-

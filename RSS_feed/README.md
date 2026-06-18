@@ -122,9 +122,23 @@ Actions → `mqtt.publish`).
 
 ## Notes & limitations
 
+- The automations use the **modern HA automation syntax**
+  (`triggers:`/`trigger:`/`actions:`/`action:`) and require **Home Assistant
+  2024.10 or newer**.
 - Home Assistant's REST integration auto-converts the feed's XML to a dict, so
   `value_json.rss.channel.item` is the item list. Atom feeds use
   `value_json.feed.entry` — see the variant in the REST sensor example.
 - Icons are **not** auto-downloaded by ID at send time; add them via the AWTRIX
   web UI first.
 - Titles are passed through `striptags` + trim to drop stray HTML.
+
+### Editor warnings (VS Code / Studio Code Server)
+
+When you paste the package in, the Home Assistant extension shows yellow
+**"Entity … does not exist in your Home Assistant instance"** warnings for the
+`input_*` / `sensor.awtrix_rss_feed` entities. That's expected — those entities
+are *created by this very package*, so they don't exist until you **restart
+Home Assistant**. After a restart the warnings clear.
+
+The authoritative check is **Developer Tools → YAML → Check Configuration** in
+Home Assistant itself (not the editor). If that passes, you're good.

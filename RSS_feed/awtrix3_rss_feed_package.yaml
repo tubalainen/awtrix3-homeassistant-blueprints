@@ -103,16 +103,18 @@ rest:
 # ----------------------------------------------------------------------------
 #  Automations
 # ----------------------------------------------------------------------------
+#  (Uses the modern HA automation syntax: triggers/trigger/actions/action.
+#   Requires Home Assistant 2024.10 or newer.)
 automation:
   # Re-fetch the feed immediately when the URL helper changes.
   - id: awtrix_rss_refresh_on_url_change
     alias: "AWTRIX RSS – Refresh feed when URL changes"
     mode: single
-    trigger:
-      - platform: state
+    triggers:
+      - trigger: state
         entity_id: input_text.awtrix_rss_url
-    action:
-      - service: homeassistant.update_entity
+    actions:
+      - action: homeassistant.update_entity
         target:
           entity_id: sensor.awtrix_rss_feed
 
@@ -121,10 +123,10 @@ automation:
     alias: "AWTRIX RSS – Push headlines to display"
     mode: single
     max_exceeded: silent
-    trigger:
-      - platform: state
+    triggers:
+      - trigger: state
         entity_id: sensor.awtrix_rss_feed
-      - platform: state
+      - trigger: state
         entity_id:
           - input_number.awtrix_rss_count
           - input_select.awtrix_rss_icon_behavior
@@ -132,9 +134,9 @@ automation:
           - input_text.awtrix_rss_color
           - input_text.awtrix_rss_separator
           - input_text.awtrix_rss_prefix
-      - platform: homeassistant
+      - trigger: homeassistant
         event: start
-      - platform: time_pattern
+      - trigger: time_pattern
         minutes: "/15"
     variables:
       behavior_map:
@@ -142,8 +144,8 @@ automation:
         "Scroll away (no reappear)": 1
         "Scroll away (reappear each loop)": 2
       default_icon: "85"
-    action:
-      - service: mqtt.publish
+    actions:
+      - action: mqtt.publish
         data:
           topic: "{{ states('input_text.awtrix_rss_prefix') | trim }}/custom/rss"
           payload: >-
