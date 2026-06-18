@@ -80,7 +80,9 @@ the **Feed URL** helper re-fetches immediately. The app is published to
 
 | Field | What to enter |
 |-------|----------------|
-| **AWTRIX MQTT topic prefix** | The prefix before `/custom/` (AWTRIX UI → *Network*). No trailing slash. |
+| **AWTRIX device(s)** | Pick your display from the device list. The MQTT prefix is read automatically from the device — **no typing needed**. |
+| **Manual MQTT prefix** | Leave blank unless the device picker can't find your AWTRIX (then enter the prefix, no trailing slash). |
+| **App name** | Topic suffix `…/custom/<app_name>`; default `rss`. |
 | **RSS feed sensor** | The sensor from step 1. |
 | **Number of headlines** | 1–20. |
 | **Icon behaviour** | Fixed left / scroll-away (no reappear) / scroll-away (reappear). |
@@ -113,10 +115,52 @@ payload and publish it to `<prefix>/custom/rss`:
 - `repeat: 1` scrolls the full set of headlines once, then the app advances to
   the next app in the AWTRIX loop — i.e. "show N headlines, then move on".
 
+### How often it pushes
+
+- **Package:** when the feed sensor updates (REST `scan_interval`, default 30
+  min), when any helper changes, on Home Assistant start, and a safety re-push
+  **every 15 minutes**.
+- **Blueprint:** when the feed sensor updates, on Home Assistant start, and
+  every *Safety re-push interval* minutes (default 15).
+
+The app is a persistent AWTRIX Custom App, so once pushed it stays in the
+rotation until updated or removed — it doesn't need to be re-sent to keep
+showing.
+
 ### Removing the app
 
 Publish an **empty** payload to `<prefix>/custom/rss` (Developer Tools →
 Actions → `mqtt.publish`).
+
+---
+
+## Troubleshooting — nothing shows on the display
+
+Almost always this is the **MQTT topic prefix**. AWTRIX only listens on its own
+prefix (e.g. `awtrix_b8d61a`), not the generic `awtrix`.
+
+1. **Find your real prefix.** Easiest: Developer Tools → States, filter for
+   `device_topic` — the state of `sensor.<your_awtrix>_device_topic` *is* your
+   prefix. (Or AWTRIX web UI → *Settings → MQTT prefix*, or watch
+   Developer Tools → MQTT → Listen to `#` for topics like `awtrix_xxxx/stats`.)
+2. **Send a test message.** Developer Tools → Actions → `mqtt.publish`:
+   - Topic: `<your_prefix>/custom/test`
+   - Payload: `{"text":"HELLO","icon":"85"}`
+
+   If `HELLO` appears, MQTT + prefix are correct. If not, the prefix/MQTT/broker
+   is the problem — fix that first.
+3. **Blueprint users:** just pick the device — the prefix is read automatically,
+   so you can't get it wrong. Re-create the automation with the updated
+   blueprint if you previously typed a prefix.
+4. **Package users:** set the **AWTRIX RSS – MQTT topic prefix** helper to the
+   value from step 1 (don't leave it as `awtrix` unless that's truly your prefix).
+5. **Check the feed sensor.** In Developer Tools → States, confirm
+   `sensor.awtrix_rss_feed` exists and has an `item` attribute. If it's missing,
+   the feed isn't being parsed (see the REST sensor notes). With no items the
+   app still shows the icon + "No headlines".
+6. **Did you restart HA?** Helpers/sensors created by the package don't exist
+   until a full restart (not just a YAML reload).
+7. **Icon 85 not downloaded** only blanks the icon — text still scrolls.
 
 ---
 

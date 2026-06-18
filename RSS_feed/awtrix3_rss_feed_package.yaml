@@ -38,6 +38,10 @@ input_text:
     max: 255
     icon: mdi:rss
   awtrix_rss_prefix:
+    # IMPORTANT: this must match YOUR display's real MQTT prefix, not the
+    # generic "awtrix". Find it in Developer Tools → States as the state of
+    # sensor.<your_awtrix>_device_topic, or in the AWTRIX web UI under
+    # Settings → MQTT prefix. The app is published to <prefix>/custom/rss.
     name: "AWTRIX RSS – MQTT topic prefix"
     initial: "awtrix"
     max: 64

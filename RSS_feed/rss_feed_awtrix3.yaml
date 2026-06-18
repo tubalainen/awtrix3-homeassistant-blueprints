@@ -24,19 +24,45 @@ blueprint:
        not auto-download icons by ID at send time.
 
     3. Create an automation from this blueprint and pick the sensor + device.
+       The MQTT topic prefix is read automatically from the selected AWTRIX
+       device — no need to type it.
 
     ──────────────────────────────────────────────────────────────────────────
   domain: automation
-  source_url: https://github.com/Blueforcer/awtrix3
+  source_url: https://github.com/tubalainen/awtrix3-homeassistant-blueprints
   input:
-    awtrix_topic_prefix:
-      name: AWTRIX MQTT topic prefix
+    awtrix_device:
+      name: AWTRIX device(s)
       description: >
-        The MQTT prefix of your AWTRIX device – the part **before** `/custom/`.
-        You'll find it in the AWTRIX web UI under *Network → Settings* (the
-        "Unique Prefix"/topic). Default AWTRIX builds often use `awtrix`.
-        Do NOT include a trailing slash. Example: `awtrix_b8d61a`.
-      default: awtrix
+        Select your AWTRIX 3 display(s). The MQTT topic prefix is read
+        automatically from each device's `device_topic` entity, so you don't
+        need to type it. (Requires the AWTRIX device to be auto-discovered via
+        MQTT.) You can pick more than one display.
+      default: []
+      selector:
+        device:
+          integration: mqtt
+          manufacturer: Blueforcer
+          model: AWTRIX 3
+          multiple: true
+
+    manual_prefix:
+      name: Manual MQTT prefix (fallback / advanced)
+      description: >
+        Optional. Only needed if the device picker above can't find your AWTRIX
+        (e.g. it isn't MQTT-discovered). Enter the prefix shown in the AWTRIX
+        web UI under *Settings → the MQTT prefix*, with NO trailing slash, e.g.
+        `awtrix_b8d61a`. Leave blank if you selected a device above.
+      default: ""
+      selector:
+        text: {}
+
+    app_name:
+      name: App name (MQTT topic suffix)
+      description: >
+        The custom-app name, i.e. the last part of the topic
+        `<prefix>/custom/<app_name>`. Must be unique per app on the display.
+      default: rss
       selector:
         text: {}
 
@@ -117,19 +143,64 @@ blueprint:
 
 # ───────────────────────────────────────────────────────────────────────────
 
-mode: single
+mode: restart
 max_exceeded: silent
 
 variables:
+  device_ids: !input awtrix_device
+  manual_prefix: !input manual_prefix
+  app_name: !input app_name
   feed_sensor: !input feed_sensor
-  topic_prefix: !input awtrix_topic_prefix
-  app_name: rss
   num: !input num_headlines
   push_icon: !input icon_behavior
   icon_code: !input icon_code
   text_color: !input text_color
   sep: !input separator
   default_icon: "85"
+
+  # Build the list of MQTT topics: <prefix>/custom/<app_name>, where the prefix
+  # of each selected device is read from its `device_topic` entity. A manual
+  # prefix (if given) is added as well.
+  topics: >-
+    {%- set ns = namespace(t=[]) -%}
+    {%- for device_id in (device_ids if device_ids is iterable and device_ids is not string else [device_ids]) -%}
+      {%- set ents = device_entities(device_id) | select('search','device_topic') | list -%}
+      {%- if ents | count > 0 -%}
+        {%- set p = states(ents[0]) | string | replace(' ','') -%}
+        {%- if p not in ['unknown','unavailable',''] -%}
+          {%- set ns.t = ns.t + [ p ~ '/custom/' ~ app_name ] -%}
+        {%- endif -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {%- if manual_prefix | string | trim -%}
+      {%- set ns.t = ns.t + [ (manual_prefix | string | trim) ~ '/custom/' ~ app_name ] -%}
+    {%- endif -%}
+    {{ ns.t }}
+
+  # Build the AWTRIX custom-app JSON payload once, reused for every topic.
+  payload: >-
+    {%- set ns = namespace(titles=[]) -%}
+    {%- set raw = state_attr(feed_sensor, 'item') -%}
+    {%- if raw is mapping -%}{%- set raw = [raw] -%}{%- endif -%}
+    {%- if raw is string or raw is none -%}{%- set raw = [] -%}{%- endif -%}
+    {%- for it in raw[: (num | int)] -%}
+      {%- set t = it.title if (it is mapping and it.title is defined) else it -%}
+      {%- if t is mapping -%}{%- set t = t.get('#text', '') -%}{%- endif -%}
+      {%- set t = t | string | striptags | trim -%}
+      {%- if t -%}{%- set ns.titles = ns.titles + [t] -%}{%- endif -%}
+    {%- endfor -%}
+    {%- set body = ns.titles | join(sep) -%}
+    {%- set icon = icon_code if (icon_code | string | trim) else default_icon -%}
+    {{
+      {
+        "text": (body if body else "No headlines"),
+        "icon": icon,
+        "pushIcon": (push_icon | int),
+        "color": text_color,
+        "repeat": 1,
+        "scrollSpeed": 100
+      } | to_json
+    }}
 
 triggers:
   - trigger: state
@@ -140,29 +211,12 @@ triggers:
     minutes: !input refresh_minutes
 
 actions:
-  - action: mqtt.publish
-    data:
-      topic: "{{ topic_prefix | trim }}/custom/{{ app_name }}"
-      payload: >-
-        {%- set ns = namespace(titles=[]) -%}
-        {%- set raw = state_attr(feed_sensor, 'item') -%}
-        {%- if raw is mapping -%}{%- set raw = [raw] -%}{%- endif -%}
-        {%- if raw is string or raw is none -%}{%- set raw = [] -%}{%- endif -%}
-        {%- for it in raw[: (num | int)] -%}
-          {%- set t = it.title if (it is mapping and it.title is defined) else it -%}
-          {%- if t is mapping -%}{%- set t = t.get('#text', '') -%}{%- endif -%}
-          {%- set t = t | string | striptags | trim -%}
-          {%- if t -%}{%- set ns.titles = ns.titles + [t] -%}{%- endif -%}
-        {%- endfor -%}
-        {%- set body = ns.titles | join(sep) -%}
-        {%- set icon = icon_code if (icon_code | string | trim) else default_icon -%}
-        {{
-          {
-            "text": (body if body else "No headlines"),
-            "icon": icon,
-            "pushIcon": (push_icon | int),
-            "color": text_color,
-            "repeat": 1,
-            "scrollSpeed": 100
-          } | to_json
-        }}
+  - repeat:
+      for_each: "{{ topics }}"
+      sequence:
+        - action: mqtt.publish
+          data:
+            qos: 0
+            retain: false
+            topic: "{{ repeat.item }}"
+            payload: "{{ payload }}"
