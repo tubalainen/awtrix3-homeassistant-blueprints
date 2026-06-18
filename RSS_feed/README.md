@@ -8,7 +8,7 @@ Assistant.
 
 | | All-in-one **Package** ⭐ | **Blueprint** + REST sensor |
 |---|---|---|
-| File(s) | `awtrix3_rss_feed_package.yaml` | `rss_feed_awtrix3.yaml` + `rss_rest_sensor_example.yaml` |
+| File(s) | `awtrix3_rss_feed_package.yaml` | `rss_feed_awtrix3.yaml` (+ a REST feed sensor) |
 | Feed sensor included? | **Yes** – bundled in the same file | No – you add the REST sensor separately |
 | Config | Live UI helpers (URL, count, icon, …) | Blueprint inputs in the automation editor |
 | Best for | One self-contained drop-in, change everything from the UI | People who prefer the blueprint import workflow |
@@ -49,10 +49,13 @@ the **Feed URL** helper re-fetches immediately. The app is published to
 
 ## Option B — Blueprint + REST sensor
 
-1. Create the feed sensor: copy the **Standard RSS 2.0** block from
-   [`rss_rest_sensor_example.yaml`](rss_rest_sensor_example.yaml) into
-   `configuration.yaml` (or a package), set your `resource:` URL, restart HA.
-   Confirm the sensor has an **`item`** attribute in Developer Tools → States.
+1. Create the feed sensor: copy the `rest:` block from
+   [`awtrix3_rss_feed_package.yaml`](awtrix3_rss_feed_package.yaml) into
+   `configuration.yaml` (or a package), set your feed URL (replace the
+   `resource_template:` line with a plain `resource: "https://…"`), and restart
+   HA. Confirm the sensor has an **`item`** attribute in Developer Tools →
+   States. (The package's REST sensor is the reference example — Atom feeds use
+   `value_json.feed.entry`.)
 2. Download icon **85** on the AWTRIX **Icons** tab.
 3. **Install the blueprint** — use whichever method you prefer:
 

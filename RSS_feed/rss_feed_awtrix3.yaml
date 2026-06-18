@@ -14,10 +14,10 @@ blueprint:
 
     SETUP (one-time, before using this blueprint):
 
-    1. Create a REST sensor that fetches & parses your RSS URL. A ready-made
-       snippet is provided in `rss_rest_sensor_example.yaml` – paste it into your
-       `configuration.yaml` (or a package), set your feed URL, and restart HA.
-       This is where the **RSS feed URL is selected**.
+    1. Create a REST sensor that fetches & parses your RSS URL. Use the `rest:`
+       block in `awtrix3_rss_feed_package.yaml` as a reference – paste it into
+       your `configuration.yaml` (or a package), set your feed URL, and restart
+       HA. This is where the **RSS feed URL is selected**.
 
     2. On the AWTRIX web UI → *Icons* tab, download icon ID **85** (or whatever
        icon ID you plan to use) so it exists on the display's flash. AWTRIX does
