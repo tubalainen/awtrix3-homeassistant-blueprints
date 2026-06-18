@@ -53,9 +53,30 @@ the **Feed URL** helper re-fetches immediately. The app is published to
    `configuration.yaml` (or a package), set your `resource:` URL, restart HA.
    Confirm the sensor has an **`item`** attribute in Developer Tools → States.
 2. Download icon **85** on the AWTRIX **Icons** tab.
-3. Import [`rss_feed_awtrix3.yaml`](rss_feed_awtrix3.yaml):
-   *Settings → Automations & Scenes → Blueprints → Import Blueprint*.
-4. Create an automation and fill in:
+3. **Install the blueprint** — use whichever method you prefer:
+
+   **Method 1 – Import from URL (easiest)**
+   1. In Home Assistant go to **Settings → Automations & Scenes → Blueprints**.
+   2. Click **Import Blueprint** (bottom-right).
+   3. Paste this URL and click **Preview**, then **Import Blueprint**:
+      ```
+      https://github.com/tubalainen/awtrix3-homeassistant-blueprints/blob/main/RSS_feed/rss_feed_awtrix3.yaml
+      ```
+      Home Assistant fetches the file and adds it under *AWTRIX 3 – RSS Feed
+      Headlines*. No restart needed.
+
+   **Method 2 – Manual file copy**
+   1. Download [`rss_feed_awtrix3.yaml`](rss_feed_awtrix3.yaml).
+   2. Place it in your config folder under
+      `config/blueprints/automation/awtrix3/rss_feed_awtrix3.yaml`
+      (create the `awtrix3` subfolder if it doesn't exist).
+   3. In **Settings → Automations & Scenes → Blueprints**, click the overflow
+      menu (⋮) → **Reload Blueprints** (or restart HA). The blueprint now appears
+      in the list.
+
+4. **Create the automation:** on the blueprint's card click **Create
+   Automation** (Method 1) or find it in the Blueprints list and click **Use
+   Blueprint**, then fill in:
 
 | Field | What to enter |
 |-------|----------------|
