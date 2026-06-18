@@ -1,0 +1,88 @@
+# ============================================================================
+#  AWTRIX 3 RSS Feed – REST sensor
+# ----------------------------------------------------------------------------
+#  This is where you SELECT THE RSS FEED URL.
+#
+#  Home Assistant's REST integration automatically converts an XML response
+#  into a dict, so `value_json.rss.channel.item` becomes the list of feed
+#  items. The blueprint reads the `item` attribute this sensor exposes.
+#
+#  HOW TO USE
+#  1. Paste ONE of the blocks below into your configuration.yaml
+#     (or into a package file under /config/packages/).
+#  2. Replace the `resource:` URL with your feed and give it a unique name.
+#  3. Restart Home Assistant (or reload "REST entities").
+#  4. In Developer Tools → States, confirm the sensor has an `item` attribute.
+#  5. Point the blueprint's "RSS feed sensor" at this entity.
+#
+#  Add as many `- resource:` blocks as you have feeds (one sensor per feed).
+# ============================================================================
+
+
+# ---------------------------------------------------------------------------
+#  STANDARD RSS 2.0 FEED  (most feeds: BBC, NYT, The Verge, Reddit /.rss, ...)
+# ---------------------------------------------------------------------------
+rest:
+  - resource: "https://feeds.bbci.co.uk/news/world/rss.xml"   # <-- YOUR FEED URL
+    scan_interval: 1800            # re-fetch every 30 min (seconds)
+    headers:
+      User-Agent: "Home Assistant AWTRIX RSS"
+    sensor:
+      - name: "RSS Feed World News"        # <-- friendly name (-> sensor.rss_feed_world_news)
+        unique_id: rss_feed_world_news     # <-- must be unique per feed
+        icon: mdi:rss
+        unit_of_measurement: "headlines"
+        value_template: >-
+          {% set i = value_json.rss.channel.item | default([], true) %}
+          {% if i is mapping %}1{% else %}{{ i | count }}{% endif %}
+        json_attributes_path: "$.rss.channel"
+        json_attributes:
+          - item
+
+
+# ---------------------------------------------------------------------------
+#  ATOM FEED VARIANT  (e.g. many YouTube channel feeds, some blogs)
+#  Atom uses <feed><entry> instead of <rss><channel><item>.
+#  Use this block instead, and set the blueprint to read the same sensor —
+#  but note: the blueprint expects the items under an `item` attribute, so we
+#  copy Atom `entry` into an `item` attribute via json_attributes alias path.
+# ---------------------------------------------------------------------------
+#
+# rest:
+#   - resource: "https://www.youtube.com/feeds/videos.xml?channel_id=XXXXXXXX"
+#     scan_interval: 1800
+#     headers:
+#       User-Agent: "Home Assistant AWTRIX RSS"
+#     sensor:
+#       - name: "RSS Feed My Channel"
+#         unique_id: rss_feed_my_channel
+#         icon: mdi:rss
+#         unit_of_measurement: "headlines"
+#         value_template: >-
+#           {% set i = value_json.feed.entry | default([], true) %}
+#           {% if i is mapping %}1{% else %}{{ i | count }}{% endif %}
+#         json_attributes_path: "$.feed"
+#         json_attributes:
+#           - entry
+#
+#  For an Atom feed, the items live in the `entry` attribute, not `item`.
+#  Easiest fix: create a small template sensor that republishes `entry` as
+#  `item`, then point the blueprint at THAT template sensor:
+#
+# template:
+#   - sensor:
+#       - name: "RSS Feed My Channel (normalised)"
+#         state: "{{ state_attr('sensor.rss_feed_my_channel', 'entry') | count }}"
+#         attributes:
+#           item: "{{ state_attr('sensor.rss_feed_my_channel', 'entry') }}"
+
+
+# ---------------------------------------------------------------------------
+#  TROUBLESHOOTING
+#  • No `item` attribute? The feed probably isn't being parsed as XML. Some
+#    servers send the wrong content-type. Check the raw response and, if
+#    needed, the feed structure with:  {{ value_json }}  in Developer Tools.
+#  • 403/blocked? Some feeds require a real User-Agent (set above) or HTTPS.
+#  • Titles show HTML entities? The blueprint runs `striptags` + trim on each
+#    title, which removes tags; stray &amp; etc. come straight from the feed.
+# ---------------------------------------------------------------------------

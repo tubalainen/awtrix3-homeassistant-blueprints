@@ -1,0 +1,168 @@
+blueprint:
+  name: AWTRIX 3 – RSS Feed Headlines
+  description: >
+    Pushes the latest headlines from an RSS feed sensor to an AWTRIX 3 display
+    (Ulanzi TC001 / DIY) as a Custom App over MQTT.
+
+
+    Choose how many headlines to show before the app advances, whether the icon
+    stays fixed on the left or scrolls away with the text, and which icon to use
+    (defaults to the orange LaMetric RSS icon **#85** when left blank).
+
+
+    ──────────────────────────────────────────────────────────────────────────
+
+    SETUP (one-time, before using this blueprint):
+
+    1. Create a REST sensor that fetches & parses your RSS URL. A ready-made
+       snippet is provided in `rss_rest_sensor_example.yaml` – paste it into your
+       `configuration.yaml` (or a package), set your feed URL, and restart HA.
+       This is where the **RSS feed URL is selected**.
+
+    2. On the AWTRIX web UI → *Icons* tab, download icon ID **85** (or whatever
+       icon ID you plan to use) so it exists on the display's flash. AWTRIX does
+       not auto-download icons by ID at send time.
+
+    3. Create an automation from this blueprint and pick the sensor + device.
+
+    ──────────────────────────────────────────────────────────────────────────
+  domain: automation
+  source_url: https://github.com/Blueforcer/awtrix3
+  input:
+    awtrix_topic_prefix:
+      name: AWTRIX MQTT topic prefix
+      description: >
+        The MQTT prefix of your AWTRIX device – the part **before** `/custom/`.
+        You'll find it in the AWTRIX web UI under *Network → Settings* (the
+        "Unique Prefix"/topic). Default AWTRIX builds often use `awtrix`.
+        Do NOT include a trailing slash. Example: `awtrix_b8d61a`.
+      default: awtrix
+      selector:
+        text: {}
+
+    feed_sensor:
+      name: RSS feed sensor
+      description: >
+        The REST sensor that holds your parsed feed (see SETUP step 1). Its
+        `item` attribute must contain the list of RSS items.
+      selector:
+        entity:
+          domain: sensor
+
+    num_headlines:
+      name: Number of headlines
+      description: How many headlines to show before the app advances to the next one.
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 20
+          step: 1
+          mode: slider
+
+    icon_behavior:
+      name: Icon behaviour while scrolling
+      description: >
+        Controls AWTRIX `pushIcon`. "Fixed on the left" keeps the icon in place
+        while text scrolls past it. The "scroll away" options let the text
+        overwrite / push the icon off-screen.
+      default: "0"
+      selector:
+        select:
+          mode: dropdown
+          options:
+            - label: Keep icon fixed on the left (icon stays, text scrolls beside it)
+              value: "0"
+            - label: Scroll icon away with the text – does not reappear
+              value: "1"
+            - label: Scroll icon away with the text – reappears each loop
+              value: "2"
+
+    icon_code:
+      name: Icon (optional)
+      description: >
+        AWTRIX icon ID (e.g. `85`), an icon filename without extension, or an
+        8×8 Base64 JPG. Leave blank to use the default orange RSS icon **#85**.
+      default: ""
+      selector:
+        text: {}
+
+    text_color:
+      name: Text colour
+      description: Hex colour for the headline text.
+      default: "#FFFFFF"
+      selector:
+        text: {}
+
+    separator:
+      name: Headline separator
+      description: Text placed between headlines when they are joined together.
+      default: "   •   "
+      selector:
+        text: {}
+
+    refresh_minutes:
+      name: Safety re-push interval (minutes)
+      description: >
+        Besides updating whenever the feed sensor changes, the app is re-sent on
+        this interval so it survives an AWTRIX reboot. Set higher to reduce MQTT
+        traffic.
+      default: 15
+      selector:
+        number:
+          min: 1
+          max: 240
+          step: 1
+          mode: box
+
+# ───────────────────────────────────────────────────────────────────────────
+
+mode: single
+max_exceeded: silent
+
+variables:
+  feed_sensor: !input feed_sensor
+  topic_prefix: !input awtrix_topic_prefix
+  app_name: rss
+  num: !input num_headlines
+  push_icon: !input icon_behavior
+  icon_code: !input icon_code
+  text_color: !input text_color
+  sep: !input separator
+  default_icon: "85"
+
+trigger:
+  - platform: state
+    entity_id: !input feed_sensor
+  - platform: homeassistant
+    event: start
+  - platform: time_pattern
+    minutes: !input refresh_minutes
+
+action:
+  - service: mqtt.publish
+    data:
+      topic: "{{ topic_prefix | trim }}/custom/{{ app_name }}"
+      payload: >-
+        {%- set ns = namespace(titles=[]) -%}
+        {%- set raw = state_attr(feed_sensor, 'item') -%}
+        {%- if raw is mapping -%}{%- set raw = [raw] -%}{%- endif -%}
+        {%- if raw is string or raw is none -%}{%- set raw = [] -%}{%- endif -%}
+        {%- for it in raw[: (num | int)] -%}
+          {%- set t = it.title if (it is mapping and it.title is defined) else it -%}
+          {%- if t is mapping -%}{%- set t = t.get('#text', '') -%}{%- endif -%}
+          {%- set t = t | string | striptags | trim -%}
+          {%- if t -%}{%- set ns.titles = ns.titles + [t] -%}{%- endif -%}
+        {%- endfor -%}
+        {%- set body = ns.titles | join(sep) -%}
+        {%- set icon = icon_code if (icon_code | string | trim) else default_icon -%}
+        {{
+          {
+            "text": (body if body else "No headlines"),
+            "icon": icon,
+            "pushIcon": (push_icon | int),
+            "color": text_color,
+            "repeat": 1,
+            "scrollSpeed": 100
+          } | to_json
+        }}
