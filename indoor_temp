@@ -1,0 +1,67 @@
+blueprint:
+  name: AWTRIX Indoor Temperature
+  description: Display selected indoor temperature sensor on AWTRIX
+  domain: automation
+
+  input:
+    awtrix_topic:
+      name: AWTRIX MQTT topic
+      default: awtrix/custom/indoor_temp
+      selector:
+        text:
+
+    temperature_sensor:
+      name: Temperature sensor
+      description: Select any indoor temperature sensor
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+              device_class: temperature
+
+    duration:
+      name: Duration
+      default: 30
+      selector:
+        number:
+          min: 0
+          max: 300
+          unit_of_measurement: sec
+          step: 1
+          mode: slider
+
+mode: restart
+
+variables:
+  awtrix_topic: !input awtrix_topic
+  temperature_sensor: !input temperature_sensor
+  duration: !input duration
+
+  temperature: "{{ states(temperature_sensor) | float(0) }}"
+  display_text: "{{ temperature | round(1) }}°"
+
+  display_color: >
+    {% if temperature < 18 %}
+      #00FFFF
+    {% elif temperature < 21 %}
+      #00FF00
+    {% elif temperature < 24 %}
+      #FFFF00
+    {% else %}
+      #FF9900
+    {% endif %}
+
+  payload: >
+    {"icon":6980,"text":"{{ display_text | trim }}","color":"{{ display_color | trim }}","duration":{{ duration | int }},"lifetimeMode":1}
+
+trigger:
+  - platform: state
+    entity_id: !input temperature_sensor
+
+action:
+  - service: mqtt.publish
+    data:
+      topic: "{{ awtrix_topic }}"
+      payload: "{{ payload }}"
+      retain: false
+      qos: 0
