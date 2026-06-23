@@ -15,3 +15,8 @@ See each blueprint's own `README.md` for setup instructions.
  Blueprint | Description |
 |-----------|-------------|
 | [Indoor Temp](Temp/) | Let you choose and display a indoor temp senor on AWTRIX 3 display as a Custom App. with a custom icon (defaults to LaMetric Temp icon #6980). 
+
+
+ Blueprint | Description |
+|-----------|-------------|
+| [Weather_now](weather/) | Let´s you display todays weather and tomorrows using the built in met.no integration and display it on your Awtrix3 display as custom apps
