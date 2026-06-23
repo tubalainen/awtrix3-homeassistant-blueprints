@@ -19,4 +19,4 @@ See each blueprint's own `README.md` for setup instructions.
 
  Blueprint | Description |
 |-----------|-------------|
-| [Weather_now](weather/) | Let´s you display todays weather and tomorrows using the built in met.no integration and display it on your Awtrix3 display as custom apps
+| [Weather](weather/) | Let´s you display todays weather and tomorrows using the built in met.no integration and display it on your Awtrix3 display as custom apps
