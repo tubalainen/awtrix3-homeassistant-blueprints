@@ -1,19 +1,37 @@
-Let´s you display weather now and tomorrow if you use both blueprints, 
-they will collect the info from the built in met.no weahter integraion in HomeAssistant and display them on the Awtrix3 display. 
-to skip scrolling on the display Todays weather is shortend to NU (Now in Swedish) and IM (Tomrrow in Swedish) 
-this can also be cahnged in the blueprint but will then add a scroll to the display if you use more then 3 chars. 
 
-You will need to download these icons to your unit first, you can change the icons if you want to just remeber to download it to the display first then
-change the icon in the blueprint.  
+You are free to use your own icons if desired. Just make sure they are uploaded to your AWTRIX device first and then update the icon IDs in the blueprint accordingly.
 
-11201
-12181
-22160
-2283
-2284
-73790
-2289
-49301
-73809
-55032
-60936
+## Blueprints
+
+### Current Weather
+
+Displays the current weather conditions.
+
+[![Open your Home Assistant instance and import this blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/tubalainen/awtrix3-homeassistant-blueprints/blob/main/weather/weather_today.yaml)
+
+### Tomorrow's Forecast
+
+Displays tomorrow's weather forecast.
+
+[![Open your Home Assistant instance and import this blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/tubalainen/awtrix3-homeassistant-blueprints/blob/main/weather/weather_tomorrow.yaml)
+
+## Installation
+
+1. Import one or both blueprints using the buttons above.
+2. Create a new automation from the imported blueprint(s).
+3. Select your weather entity from the Met.no integration.
+4. Configure your AWTRIX MQTT topic if required.
+5. Save the automation.
+
+The display will automatically update with the latest weather information.
+
+## Example Display
+
+| Label | Description |
+|---------|-------------|
+| NU | Current weather conditions |
+| IM | Tomorrow's weather forecast |
+
+## Contributing
+
+Suggestions, improvements, and pull requests are always welcome. Feel free to help improve these blueprints for the AWTRIX and Home Assistant community.
