@@ -1,0 +1,95 @@
+blueprint:
+  name: AWTRIX Weather Now
+  description: Display current weather temperature with dynamic weather icon on AWTRIX
+  domain: automation
+
+  input:
+    awtrix_topic:
+      name: AWTRIX MQTT topic
+      description: Example awtrix/custom/weather
+      selector:
+        text:
+      default: awtrix/custom/weather
+
+    weather_entity:
+      name: Weather entity
+      description: Example weather.forecast_hem
+      selector:
+        entity:
+          filter:
+            - domain: weather
+      default: weather.forecast_hem
+
+    duration:
+      name: Duration
+      description: How long the weather app should stay on screen.
+      selector:
+        number:
+          min: 0
+          max: 300
+          unit_of_measurement: sec
+          step: 1
+          mode: slider
+      default: 10
+
+mode: restart
+
+variables:
+  awtrix_topic: !input awtrix_topic
+  weather_entity: !input weather_entity
+  duration: !input duration
+
+  condition: "{{ states(weather_entity) }}"
+  temperature: "{{ state_attr(weather_entity, 'temperature') | float(0) }}"
+
+  display_text: "Nu {{ temperature | round(0) | int }}°"
+
+  icon: >
+    {% set icons = {
+      'sunny': 11201,
+      'clear-night': 12181,
+      'partlycloudy': 22160,
+      'cloudy': 2283,
+      'rainy': 2284,
+      'pouring': 73790,
+      'snowy': 2289,
+      'snowy-rainy': 49301,
+      'fog': 73809,
+      'windy': 55032,
+      'lightning': 60936
+    } %}
+    {{ icons.get(condition, 22160) }}
+
+  display_color: >
+    {% if temperature < 0 %}
+      #0099FF
+    {% elif temperature < 10 %}
+      #00FFFF
+    {% elif temperature < 20 %}
+      #00FF00
+    {% elif temperature < 25 %}
+      #FFFF00
+    {% else %}
+      #FF9900
+    {% endif %}
+
+  payload: >
+    {
+      "icon": {{ icon }},
+      "text": "{{ display_text }}",
+      "color": "{{ display_color }}",
+      "duration": {{ duration }},
+      "lifetimeMode": 1
+    }
+
+trigger:
+  - platform: state
+    entity_id: weather.forecast_hem
+
+action:
+  - service: mqtt.publish
+    data:
+      topic: "{{ awtrix_topic }}"
+      payload: "{{ payload }}"
+      retain: false
+      qos: 0
