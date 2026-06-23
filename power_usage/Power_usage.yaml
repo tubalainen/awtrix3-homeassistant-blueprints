@@ -1,0 +1,77 @@
+blueprint:
+  name: AWTRIX Power Usage
+  description: Display current power consumption from selected sensor on AWTRIX
+  domain: automation
+
+  input:
+    awtrix_topic:
+      name: AWTRIX MQTT topic
+      description: MQTT topic for your AWTRIX custom app
+      default: awtrix/custom/power
+      selector:
+        text:
+
+    power_sensor:
+      name: Power sensor
+      description: Select the sensor that reports current power usage
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+
+mode: restart
+
+variables:
+  awtrix_topic: !input awtrix_topic
+  power_sensor: !input power_sensor
+
+  power_value: "{{ states(power_sensor) | float(0) }}"
+  unit: "{{ state_attr(power_sensor, 'unit_of_measurement') }}"
+
+  power_kw: >
+    {% if unit == 'W' %}
+      {{ power_value / 1000 }}
+    {% else %}
+      {{ power_value }}
+    {% endif %}
+
+  power_w: "{{ (power_kw | float(0) * 1000) | round(0) }}"
+
+  display_text: >
+    {% if power_kw | float(0) < 1 %}
+      {{ power_w | int }}W
+    {% else %}
+      {{ power_kw | float(0) | round(1) }}kW
+    {% endif %}
+
+  display_color: >
+    {% set kw = power_kw | float(0) %}
+    {% if kw < 1 %}
+      #00FF00
+    {% elif kw < 3 %}
+      #FFFF00
+    {% elif kw < 6 %}
+      #FF9900
+    {% else %}
+      #FF0000
+    {% endif %}
+
+  payload: >
+    {
+      "icon": 50785,
+      "text": "{{ display_text | trim }}",
+      "color": "{{ display_color | trim }}",
+      "duration": 10,
+      "lifetimeMode": 1
+    }
+
+trigger:
+  - platform: state
+    entity_id: !input power_sensor
+
+action:
+  - service: mqtt.publish
+    data:
+      topic: "{{ awtrix_topic }}"
+      payload: "{{ payload }}"
+      retain: false
