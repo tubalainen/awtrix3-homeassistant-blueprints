@@ -1,0 +1,96 @@
+blueprint:
+  name: AWTRIX Weather Tomorrow
+  description: Display tomorrow weather forecast on AWTRIX
+  domain: automation
+
+  input:
+    awtrix_topic:
+      name: AWTRIX MQTT topic
+      default: awtrix/custom/weather_tomorrow
+      selector:
+        text:
+
+    weather_entity:
+      name: Weather entity
+      default: weather.forecast_hem
+      selector:
+        entity:
+          filter:
+            - domain: weather
+
+    duration:
+      name: Duration
+      default: 10
+      selector:
+        number:
+          min: 0
+          max: 300
+          unit_of_measurement: sec
+          step: 1
+          mode: slider
+
+mode: restart
+
+trigger:
+  - platform: time_pattern
+    minutes: "/30"
+  - platform: homeassistant
+    event: start
+
+action:
+  - service: weather.get_forecasts
+    target:
+      entity_id: !input weather_entity
+    data:
+      type: daily
+    response_variable: forecast_data
+
+  - variables:
+      awtrix_topic: !input awtrix_topic
+      weather_entity: !input weather_entity
+      duration: !input duration
+
+      tomorrow: "{{ forecast_data[weather_entity].forecast[1] }}"
+      weather_state: "{{ tomorrow.condition }}"
+      temperature: "{{ tomorrow.temperature | float(0) }}"
+
+      display_text: "Im {{ temperature | round(0) | int }}°"
+
+      icon: >
+        {% set icons = {
+          'sunny': 11201,
+          'clear-night': 12181,
+          'partlycloudy': 22160,
+          'cloudy': 2283,
+          'rainy': 2284,
+          'pouring': 73790,
+          'snowy': 2289,
+          'snowy-rainy': 49301,
+          'fog': 73809,
+          'windy': 55032,
+          'lightning': 60936
+        } %}
+        {{ icons.get(weather_state, 22160) }}
+
+      display_color: >
+        {% if temperature < 0 %}
+          #0099FF
+        {% elif temperature < 10 %}
+          #00FFFF
+        {% elif temperature < 20 %}
+          #00FF00
+        {% elif temperature < 25 %}
+          #FFFF00
+        {% else %}
+          #FF9900
+        {% endif %}
+
+      payload: >
+        {"icon":{{ icon | int }},"text":"{{ display_text | trim }}","color":"{{ display_color | trim }}","duration":{{ duration | int }},"lifetimeMode":1}
+
+  - service: mqtt.publish
+    data:
+      topic: "{{ awtrix_topic }}"
+      payload: "{{ payload }}"
+      retain: false
+      qos: 0
