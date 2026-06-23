@@ -19,4 +19,8 @@ See each blueprint's own `README.md` for setup instructions.
 
  Blueprint | Description |
 |-----------|-------------|
-| [Weather](weather/) | Let´s you display todays weather and tomorrows using the built in met.no integration and display it on your Awtrix3 display as custom apps
+| [Weather](weather/) | Let´s you display todays weather and tomorrows using the built in met.no integration and display it on your Awtrix 3 display as custom app
+
+ Blueprint | Description |
+|-----------|-------------|
+| [Power Usage](power_usage/) | Let´s you display total power usage of your home on the Atrix 3 dispaly as a custom app
