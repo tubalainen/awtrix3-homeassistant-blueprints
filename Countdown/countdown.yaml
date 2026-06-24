@@ -1,0 +1,135 @@
+blueprint:
+  name: AWTRIX Countdown
+  description: Display a configurable countdown on AWTRIX/Ulanzi via MQTT. The app is removed automatically when the countdown is finished.
+  domain: automation
+  author: MrGlenn-tech
+
+  input:
+    awtrix_base_topic:
+      name: AWTRIX base MQTT topic
+      description: Example awtrix or awtrix_XXXXXX
+      default: awtrix
+      selector:
+        text:
+
+    app_name:
+      name: Countdown app name
+      description: Unique app name/topic, for example countdown_vacation or countdown_xmas
+      default: countdown_vacation
+      selector:
+        text:
+
+    countdown_name:
+      name: Display name
+      description: Short name shown on the display, for example Vacation, Xmas or Birthday
+      default: Vacation
+      selector:
+        text:
+
+    target_datetime:
+      name: Target date and time
+      description: The date and time to count down to
+      selector:
+        datetime:
+
+    icon:
+      name: Icon ID
+      description: AWTRIX icon ID to show
+      default: "56631"
+      selector:
+        text:
+
+    display_mode:
+      name: Display mode
+      description: Choose how the remaining time should be displayed
+      default: Days
+      selector:
+        select:
+          options:
+            - Days
+            - Days Hours
+            - Days Hours Minutes
+
+    text_color:
+      name: Text color
+      description: Text color in HEX format
+      default: "#00BFFF"
+      selector:
+        text:
+
+    message_duration:
+      name: Duration
+      description: How long the message stays on screen in seconds. 0 uses AWTRIX global app time.
+      default: 10
+      selector:
+        number:
+          min: 0
+          max: 300
+          unit_of_measurement: sec
+          step: 1
+          mode: slider
+
+mode: restart
+
+variables:
+  awtrix_base_topic: !input awtrix_base_topic
+  app_name: !input app_name
+  awtrix_topic: "{{ awtrix_base_topic ~ '/custom/' ~ app_name }}"
+
+  countdown_name: !input countdown_name
+  target_datetime: !input target_datetime
+  icon: !input icon
+  display_mode: !input display_mode
+  text_color: !input text_color
+  message_duration: !input message_duration
+
+  seconds_left: "{{ (as_timestamp(target_datetime) - as_timestamp(now())) | int(0) }}"
+  days_left: "{{ (seconds_left // 86400) | int }}"
+  hours_left: "{{ ((seconds_left % 86400) // 3600) | int }}"
+  minutes_left: "{{ ((seconds_left % 3600) // 60) | int }}"
+
+  countdown_text: >
+    {% if display_mode == 'Days' %}
+      {{ countdown_name }} {{ days_left }}D
+    {% elif display_mode == 'Days Hours' %}
+      {{ countdown_name }} {{ days_left }}D {{ hours_left }}H
+    {% else %}
+      {{ countdown_name }} {{ days_left }}D {{ hours_left }}H {{ minutes_left }}M
+    {% endif %}
+
+  payload: >
+    {
+      "icon": "{{ icon }}",
+      "text": "{{ countdown_text | trim }}",
+      "duration": {{ message_duration }},
+      "color": "{{ text_color }}",
+      "lifetimeMode": 1
+    }
+
+trigger:
+  - platform: time_pattern
+    minutes: "/1"
+
+  - platform: homeassistant
+    event: start
+
+condition: []
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ seconds_left <= 0 }}"
+        sequence:
+          - service: mqtt.publish
+            data:
+              topic: "{{ awtrix_topic }}"
+              payload: ""
+              retain: false
+
+    default:
+      - service: mqtt.publish
+        data:
+          topic: "{{ awtrix_topic }}"
+          payload: "{{ payload }}"
+          retain: false
