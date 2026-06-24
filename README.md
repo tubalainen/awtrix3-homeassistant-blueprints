@@ -22,7 +22,7 @@ These blueprints make it easy to display useful information from Home Assistant 
 | ☀️ [Weather Forecast](weather/) | Display current weather conditions and tomorrow's forecast using Home Assistant's built-in Met.no integration. |
 | ⚡ [Power Usage](power_usage/) | Display your home's current power consumption with automatic W/kW conversion and color-coded indicators. |
 | 💰 [Electricity Price](Electric_Price/) | Display current Nordpool electricity prices together with a 24-hour visual price overview and color-coded pricing levels. |
-| ⏰ [Countdown](Countdown/) | Display a customizable countdown for counting down to vacations, birthdays, holidays any other important date. |
+| ⏳ [Countdown](Countdown/) | Display a customizable countdown for counting down to vacations, birthdays, holidays any other important date. |
 
 ## Requirements
 
