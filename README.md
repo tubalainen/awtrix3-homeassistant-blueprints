@@ -1,30 +1,71 @@
-# awtrix3-homeassistant-blueprints
+# AWTRIX 3 Home Assistant Blueprints
 
-Home Assistant blueprints & helpers for [AWTRIX 3](https://github.com/Blueforcer/awtrix3)
-displays (Ulanzi TC001 / DIY matrix), driven over MQTT.
+A collection of Home Assistant blueprints and helpers for **AWTRIX 3** displays (Ulanzi TC001 and DIY LED matrix projects) using MQTT.
 
-See each blueprint's own `README.md` for setup instructions.
+These blueprints make it easy to display useful information from Home Assistant directly on your AWTRIX device, including weather forecasts, indoor temperature, electricity prices, power consumption, RSS feeds, and more.
 
-## Blueprints
+## Features
+
+- Easy Home Assistant Blueprint imports
+- AWTRIX 3 compatible
+- MQTT based
+- Configurable sensors and entities
+- Community-friendly and customizable
+- Supports both Ulanzi TC001 and DIY AWTRIX displays
+
+## Available Blueprints
 
 | Blueprint | Description |
 |-----------|-------------|
-| [RSS Feed Headlines](RSS_feed/) | Pushes the latest headlines from any RSS feed to an AWTRIX 3 display as a Custom App. Choose how many headlines to show, whether the icon stays fixed or scrolls away (`pushIcon`), and a custom icon (defaults to LaMetric RSS icon #85). Available as an **all-in-one package** (helpers + REST sensor + automation in one file) **or** a blueprint. |
+| 🌐 [RSS Feed Headlines](RSS_feed/) | Display headlines from any RSS feed as a scrolling AWTRIX Custom App. Supports custom icons, configurable headline count, and icon behavior. |
+| 🌡️ [Indoor Temperature](Temp/) | Display the temperature from any Home Assistant temperature sensor on your AWTRIX display. |
+| ☀️ [Weather Forecast](weather/) | Display current weather conditions and tomorrow's forecast using Home Assistant's built-in Met.no integration. |
+| ⚡ [Power Usage](power_usage/) | Display your home's current power consumption with automatic W/kW conversion and color-coded indicators. |
+| 💰 [Electricity Price](Electric_Price/) | Display current Nordpool electricity prices together with a 24-hour visual price overview and color-coded pricing levels. |
 
+## Requirements
 
- Blueprint | Description |
-|-----------|-------------|
-| [Indoor Temp](Temp/) | Let you choose and display a indoor temp senor on AWTRIX 3 display as a Custom App. with a custom icon (defaults to LaMetric Temp icon #6980). 
+Most blueprints require:
 
+- Home Assistant
+- MQTT configured and working
+- An AWTRIX 3 device
+- Required icons uploaded to AWTRIX (see each blueprint's README)
 
- Blueprint | Description |
-|-----------|-------------|
-| [Weather](weather/) | Let´s you display todays weather and tomorrows using the built in met.no integration and display it on your Awtrix 3 display as custom app
+Some blueprints may require additional integrations such as:
 
- Blueprint | Description |
-|-----------|-------------|
-| [Power Usage](power_usage/) | Let´s you display total power usage of your home on the Atrix 3 dispaly as a custom app
+- Met.no Weather
+- Nordpool
 
- Blueprint | Description |
-|-----------|-------------|
-| [Electric_price](Electric_Price) | Let´s you display the current electric price on your Atrix 3 dispaly as a custom app
+Please refer to each blueprint's individual README for detailed setup instructions and requirements.
+
+## Installation
+
+1. Open the blueprint folder you want to use.
+2. Open the corresponding README.
+3. Click the **Import Blueprint** button.
+4. Create a new automation from the imported blueprint.
+5. Configure your sensors and AWTRIX MQTT topic.
+6. Save and enjoy.
+
+## Supported Hardware
+
+- Ulanzi TC001
+- AWTRIX Light
+- DIY AWTRIX 3 compatible LED matrix displays
+
+## Contributing
+
+Suggestions, improvements, bug reports, and pull requests are always welcome.
+
+Feel free to contribute new blueprints, improve existing ones, or help expand support for additional Home Assistant integrations.
+
+## Credits
+
+- [Blueforcer / AWTRIX 3](https://github.com/Blueforcer/awtrix3)
+- Home Assistant Community
+- Contributors to these blueprints
+
+---
+
+If you find this repository useful, please consider giving it a ⭐ on GitHub.
