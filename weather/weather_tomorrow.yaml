@@ -2,6 +2,7 @@ blueprint:
   name: AWTRIX Weather Tomorrow
   description: Display tomorrow weather forecast on AWTRIX
   domain: automation
+  author: MrGlenn-tech
 
   input:
     awtrix_topic:
