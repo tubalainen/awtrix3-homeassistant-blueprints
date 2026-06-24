@@ -2,6 +2,7 @@ blueprint:
   name: AWTRIX Indoor Temperature
   description: Display selected indoor temperature sensor on AWTRIX
   domain: automation
+  author: MrGlenn-tech
 
   input:
     awtrix_topic:
