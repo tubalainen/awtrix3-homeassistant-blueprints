@@ -24,3 +24,7 @@ See each blueprint's own `README.md` for setup instructions.
  Blueprint | Description |
 |-----------|-------------|
 | [Power Usage](power_usage/) | Let´s you display total power usage of your home on the Atrix 3 dispaly as a custom app
+
+ Blueprint | Description |
+|-----------|-------------|
+| [Electric_price](Electric_Price) | Let´s you display the current electric price on your Atrix 3 dispaly as a custom app
