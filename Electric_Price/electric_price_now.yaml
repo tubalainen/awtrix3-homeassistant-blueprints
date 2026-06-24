@@ -2,7 +2,7 @@ blueprint:
   name: AWTRIX Nordpool Electricity Price
   description: Display current Nordpool electricity price and 24h price bars on AWTRIX/Ulanzi via MQTT
   domain: automation
-  author: Kimmo / modified by Tubalainen
+  author: MrGlenn-tech
 
   input:
     awtrix_topic:
