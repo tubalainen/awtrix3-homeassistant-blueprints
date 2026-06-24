@@ -2,6 +2,7 @@ blueprint:
   name: AWTRIX Weather Now
   description: Display current weather temperature with dynamic weather icon on AWTRIX
   domain: automation
+  author: MrGlenn-tech
 
   input:
     awtrix_topic:
