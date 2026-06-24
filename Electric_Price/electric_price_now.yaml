@@ -1,0 +1,170 @@
+blueprint:
+  name: AWTRIX Nordpool Electricity Price
+  description: Display current Nordpool electricity price and 24h price bars on AWTRIX/Ulanzi via MQTT
+  domain: automation
+  author: Kimmo / modified by Tubalainen
+
+  input:
+    awtrix_topic:
+      name: AWTRIX MQTT topic
+      description: Example awtrix/custom/nordpool or awtrix_XXXXXX/custom/nordpool
+      default: awtrix/custom/nordpool
+      selector:
+        text:
+
+    nordpool_sensor:
+      name: Nordpool sensor
+      description: Select your Nordpool electricity price sensor
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+
+    hourly_attribute:
+      name: Hourly price attribute
+      description: Attribute containing hourly prices. Usually "today".
+      default: today
+      selector:
+        text:
+
+    display_unit:
+      name: Display unit
+      description: Unit shown on the AWTRIX display
+      default: c/kWh
+      selector:
+        text:
+
+    price_multiplier:
+      name: Price multiplier
+      description: Use 100 if your sensor reports prices in currency/kWh and you want cents. Use 1 if it already reports cents.
+      default: 100
+      selector:
+        number:
+          min: 1
+          max: 1000
+          step: 1
+          mode: box
+
+    low_price_limit:
+      name: Low price limit
+      description: Prices below this value are shown as green
+      default: 20
+      selector:
+        number:
+          min: 0
+          max: 500
+          step: 1
+          mode: box
+
+    medium_price_limit:
+      name: Medium price limit
+      description: Prices below this value are shown as yellow. Prices above are shown as red.
+      default: 40
+      selector:
+        number:
+          min: 0
+          max: 500
+          step: 1
+          mode: box
+
+    message_duration:
+      name: Duration
+      description: How long the message stays on screen in seconds. 0 uses AWTRIX global app time.
+      default: 10
+      selector:
+        number:
+          min: 0
+          max: 300
+          unit_of_measurement: sec
+          step: 1
+          mode: slider
+
+    icon:
+      name: Icon ID
+      description: AWTRIX icon ID. Default is 54077.
+      default: "54077"
+      selector:
+        text:
+
+mode: restart
+
+variables:
+  awtrix_topic: !input awtrix_topic
+  nordpool_sensor: !input nordpool_sensor
+  hourly_attribute: !input hourly_attribute
+  display_unit: !input display_unit
+  price_multiplier: !input price_multiplier
+  low_price_limit: !input low_price_limit
+  medium_price_limit: !input medium_price_limit
+  message_duration: !input message_duration
+  icon: !input icon
+
+  hourly_prices: "{{ state_attr(nordpool_sensor, hourly_attribute) }}"
+  current_price: "{{ states(nordpool_sensor) | float(0) }}"
+  display_price: "{{ current_price | float(0) * price_multiplier | float(1) }}"
+  price_text: "{{ '%.2f' | format(display_price | float(0)) ~ ' ' ~ display_unit }}"
+
+  payload: >
+    {%- macro get_price(item) -%}
+      {%- if item is mapping -%}
+        {{ item.get('value', 0) | float(0) }}
+      {%- else -%}
+        {{ item | float(0) }}
+      {%- endif -%}
+    {%- endmacro -%}
+
+    {%- macro price_color(price) -%}
+      {%- set value = price | float(0) * price_multiplier | float(1) -%}
+      {%- if value < low_price_limit | float(0) -%}
+        #00FF00
+      {%- elif value < medium_price_limit | float(0) -%}
+        #FFFF00
+      {%- else -%}
+        #FF0000
+      {%- endif -%}
+    {%- endmacro -%}
+
+    {%- macro draw_price_bars() -%}
+      {%- if hourly_prices is not none -%}
+        {%- for hour in range(24) -%}
+          {%- if hourly_prices | count > hour -%}
+            {"dp":[{{ 8 + hour }},7,"{{ price_color(get_price(hourly_prices[hour])) | trim }}"]}
+          {%- else -%}
+            {"dp":[{{ 8 + hour }},7,"#555555"]}
+          {%- endif -%}
+          {%- if hour + 1 != 24 -%},{%- endif -%}
+        {%- endfor -%}
+      {%- endif -%}
+    {%- endmacro -%}
+
+    {
+      "draw": [{{ draw_price_bars() }}],
+      "icon": "{{ icon }}",
+      "duration": {{ message_duration }},
+      "text": "{{ price_text }}",
+      "textCase": 2,
+      "color": "{{ price_color(current_price) | trim }}",
+      "lifetimeMode": 1
+    }
+
+trigger:
+  - platform: state
+    entity_id: !input nordpool_sensor
+
+  - platform: time_pattern
+    minutes: "0"
+
+  - platform: homeassistant
+    event: start
+
+condition:
+  - condition: template
+    value_template: "{{ hourly_prices is not none }}"
+
+action:
+  - service: mqtt.publish
+    data:
+      qos: 0
+      retain: false
+      topic: "{{ awtrix_topic }}"
+      payload: "{{ payload }}"
