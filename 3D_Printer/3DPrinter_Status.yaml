@@ -1,0 +1,252 @@
+blueprint:
+  name: AWTRIX 3D Printer Status
+  description: Display generic 3D printer status and print progress on AWTRIX/Ulanzi via MQTT
+  domain: automation
+  author: MrGlenn-tech
+
+  input:
+    awtrix_base_topic:
+      name: AWTRIX base MQTT topic
+      description: Example awtrix or awtrix_XXXXXX
+      default: awtrix
+      selector:
+        text:
+
+    app_name:
+      name: App name
+      description: Unique AWTRIX app name
+      default: printer_status
+      selector:
+        text:
+
+    printer_name:
+      name: Printer name
+      description: Short name shown on the display
+      default: Printer
+      selector:
+        text:
+
+    status_sensor:
+      name: Printer status sensor
+      description: Sensor showing printer state, for example printing, paused, complete, idle or error
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+
+    progress_sensor:
+      name: Print progress sensor
+      description: Sensor showing print progress from 0 to 100
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+
+    remove_after_minutes:
+      name: Remove after finished
+      description: Remove the app this many minutes after print is finished
+      default: 15
+      selector:
+        number:
+          min: 0
+          max: 180
+          unit_of_measurement: min
+          step: 1
+          mode: slider
+
+    icon:
+      name: Icon ID
+      description: AWTRIX icon ID
+      default: "15131"
+      selector:
+        text:
+
+    message_duration:
+      name: Duration
+      description: How long the message stays on screen in seconds. 0 uses AWTRIX global app time.
+      default: 10
+      selector:
+        number:
+          min: 0
+          max: 300
+          unit_of_measurement: sec
+          step: 1
+          mode: slider
+
+mode: restart
+
+variables:
+  awtrix_base_topic: !input awtrix_base_topic
+  app_name: !input app_name
+  awtrix_topic: "{{ awtrix_base_topic ~ '/custom/' ~ app_name }}"
+
+  printer_name: !input printer_name
+  status_sensor: !input status_sensor
+  progress_sensor: !input progress_sensor
+  remove_after_minutes: !input remove_after_minutes
+  icon: !input icon
+  message_duration: !input message_duration
+
+  printer_status: "{{ states(status_sensor) | lower }}"
+  progress_raw: "{{ states(progress_sensor) }}"
+  progress_state: "{{ states(progress_sensor) | lower }}"
+
+  progress_number: >
+    {% if progress_state in ['done', 'complete', 'completed', 'finished', 'success'] %}
+      100
+    {% else %}
+      {{ progress_raw | float(0) }}
+    {% endif %}
+
+  progress_clamped: >
+    {% set p = progress_number | float(0) %}
+    {% if p < 0 %}
+      0
+    {% elif p > 100 %}
+      100
+    {% else %}
+      {{ p | round(0) | int }}
+    {% endif %}
+
+  is_printing: >
+    {{ printer_status in ['printing', 'print', 'running', 'busy'] }}
+
+  is_paused: >
+    {{ printer_status in ['paused', 'pause', 'pausing'] }}
+
+  is_error: >
+    {{ printer_status in ['error', 'failed', 'failure', 'cancelled', 'canceled'] }}
+
+  is_offline: >
+    {{ printer_status in ['offline', 'unavailable', 'unknown'] }}
+
+  is_idle: >
+    {{ printer_status in ['idle', 'ready', 'standby', 'none', 'operational', 'available', 'online'] }}
+
+  progress_finished_now: >
+    {{
+      trigger.id == 'progress_changed'
+      and trigger.from_state is not none
+      and trigger.to_state is not none
+      and trigger.from_state.state | float(0) < 100
+      and trigger.to_state.state | float(0) >= 100
+    }}
+
+  status_finished_now: >
+    {{
+      trigger.id == 'status_changed'
+      and trigger.to_state is not none
+      and trigger.to_state.state | lower in ['complete', 'completed', 'finished', 'done', 'success']
+    }}
+
+  is_finished: >
+    {{
+      status_finished_now
+      or progress_finished_now
+    }}
+
+  text: >
+    {% if is_paused %}
+      {{ printer_name }} Pause
+    {% elif is_error %}
+      {{ printer_name }} Error
+    {% elif is_finished %}
+      {{ printer_name }} Done
+    {% else %}
+      {{ printer_name }} {{ progress_clamped | int }}%
+    {% endif %}
+
+  color: >
+    {% if is_error %}
+      #FF0000
+    {% elif is_paused %}
+      #FFFF00
+    {% elif is_finished %}
+      #00FF00
+    {% elif is_printing %}
+      #00BFFF
+    {% else %}
+      #FFFFFF
+    {% endif %}
+
+  payload: >
+    {%- set filled = ((progress_clamped | int / 100) * 32) | round(0) | int -%}
+    {%- set ns = namespace(items=[]) -%}
+    {%- for x in range(32) -%}
+      {%- if x < filled -%}
+        {%- set ns.items = ns.items + ['{"dp":[' ~ x ~ ',7,"' ~ color | trim ~ '"]}'] -%}
+      {%- else -%}
+        {%- set ns.items = ns.items + ['{"dp":[' ~ x ~ ',7,"#333333"]}'] -%}
+      {%- endif -%}
+    {%- endfor -%}
+    {
+      "icon": "{{ icon }}",
+      "text": "{{ text | trim }}",
+      "color": "{{ color | trim }}",
+      "duration": {{ message_duration }},
+      "draw": [{{ ns.items | join(',') }}],
+      "lifetimeMode": 1
+    }
+
+trigger:
+  - platform: state
+    entity_id: !input status_sensor
+    id: status_changed
+
+  - platform: state
+    entity_id: !input progress_sensor
+    id: progress_changed
+
+  - platform: homeassistant
+    event: start
+    id: ha_start
+
+condition: []
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ is_idle or is_offline }}"
+        sequence:
+          - service: mqtt.publish
+            data:
+              topic: "{{ awtrix_topic }}"
+              payload: ""
+              retain: false
+
+      - conditions:
+          - condition: template
+            value_template: "{{ is_finished }}"
+        sequence:
+          - service: mqtt.publish
+            data:
+              topic: "{{ awtrix_topic }}"
+              payload: "{{ payload }}"
+              retain: false
+
+          - delay:
+              minutes: !input remove_after_minutes
+
+          - service: mqtt.publish
+            data:
+              topic: "{{ awtrix_topic }}"
+              payload: ""
+              retain: false
+
+      - conditions:
+          - condition: template
+            value_template: "{{ is_printing or is_paused or is_error }}"
+        sequence:
+          - service: mqtt.publish
+            data:
+              topic: "{{ awtrix_topic }}"
+              payload: "{{ payload }}"
+              retain: false
+
+    default:
+      - service: mqtt.publish
+        data:
+          topic: "{{ awtrix_topic }}"
+          payload: ""
+          retain: false
