@@ -149,7 +149,7 @@ Enter any AWTRIX icon ID.
 Example:
 
 ```text
-15131
+53660
 ```
 
 Make sure the icon has been uploaded to your AWTRIX device.
