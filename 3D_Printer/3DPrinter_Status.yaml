@@ -57,7 +57,7 @@ blueprint:
     icon:
       name: Icon ID
       description: AWTRIX icon ID
-      default: "15131"
+      default: "53660"
       selector:
         text:
 
