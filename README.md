@@ -23,6 +23,8 @@ These blueprints make it easy to display useful information from Home Assistant 
 | ⚡ [Power Usage](power_usage/) | Display your home's current power consumption with automatic W/kW conversion and color-coded indicators. |
 | 💰 [Electricity Price](Electric_Price/) | Display current Nordpool electricity prices together with a 24-hour visual price overview and color-coded pricing levels. |
 | ⏳ [Countdown](Countdown/) | Display a customizable countdown for counting down to vacations, birthdays, holidays any other important date. |
+| 🖨️ [3D_Printer](3D_Printer/) | Display the current status and print progress of your 3D printer on an AWTRIX 3 / Ulanzi display using MQTT. |
+
 
 ## Requirements
 
